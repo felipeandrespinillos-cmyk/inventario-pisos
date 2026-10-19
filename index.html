@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Inventario - Pisos Cerámicos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#FAF8F5] min-h-screen font-sans text-stone-800">
+
+  <!-- PANTALLA DE LOGIN -->
+  <div id="loginScreen" class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-stone-200">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-12 h-12 rounded-xl bg-[#B45309] flex items-center justify-center text-white text-2xl font-bold shadow-sm">🏠</div>
+        <div>
+          <h1 class="text-xl font-extrabold text-stone-900 tracking-tight">CONTROL DE INVENTARIO</h1>
+          <span class="text-xs font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">PISOS CERÁMICOS</span>
+        </div>
+      </div>
+      <form onsubmit="iniciarSesion(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Usuario</label>
+          <input type="text" id="userInput" required placeholder="admin, ventas1, bodega1 o contable1"
+            class="w-full px-4 py-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Contraseña</label>
+          <input type="password" id="passInput" required placeholder="••••••••"
+            class="w-full px-4 py-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 outline-none">
+        </div>
+        <div id="loginError" class="text-red-600 text-xs hidden bg-red-50 p-3 rounded-lg border border-red-200"></div>
+        <button type="submit" id="btnLogin"
+          class="w-full bg-[#B45309] hover:bg-[#92400E] text-white font-semibold py-3 rounded-xl transition shadow-md">
+          Ingresar al Panel Ejecutivo
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- PANEL EJECUTIVO -->
+  <div id="appScreen" class="hidden max-w-7xl mx-auto px-6 py-8">
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-[#B45309] flex items-center justify-center text-white text-2xl shadow-sm">🏠</div>
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-extrabold text-stone-900 tracking-tight">CONTROL DE INVENTARIO</h1>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 border border-amber-200">PISOS CERÁMICOS</span>
+          </div>
+          <p class="text-sm text-stone-500">Panel Ejecutivo de Existencias, Rotación y Movimientos de Almacén</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="text-right mr-2">
+          <p id="userNameDisplay" class="text-sm font-bold text-stone-800"></p>
+          <span id="userRoleBadge" class="text-xs px-2 py-0.5 rounded bg-stone-200 text-stone-700 font-semibold"></span>
+        </div>
+        <button id="btnAbrirMov" onclick="abrirModal('modalMov')" class="px-4 py-2.5 rounded-full border border-stone-300 bg-white hover:bg-stone-50 text-sm font-semibold flex items-center gap-2 shadow-sm">
+          📈 Registrar Movimiento
+        </button>
+        <button id="btnAbrirProd" onclick="abrirModal('modalProd')" class="px-4 py-2.5 rounded-full bg-[#B45309] hover:bg-[#92400E] text-white text-sm font-semibold flex items-center gap-2 shadow-sm">
+          + Nuevo Producto
+        </button>
+        <button onclick="cerrarSesion()" class="px-3 py-2.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold">
+          Salir
+        </button>
+      </div>
+    </div>
+
+    <!-- Pestañas de Navegación -->
+    <div class="flex border-b border-stone-200 mb-6 gap-6 overflow-x-auto text-sm font-semibold">
+      <button onclick="cambiarTab('resumen')" id="tab-resumen" class="pb-3 border-b-2 border-[#B45309] text-[#B45309] flex items-center gap-2">📊 Resumen Ejecutivo</button>
+      <button onclick="cambiarTab('catalogo')" id="tab-catalogo" class="pb-3 border-b-2 border-transparent text-stone-500 hover:text-stone-800 flex items-center gap-2">🧱 Catálogo & Existencias (<span id="countCat">0</span>)</button>
+      <button onclick="cambiarTab('historial')" id="tab-historial" class="pb-3 border-b-2 border-transparent text-stone-500 hover:text-stone-800 flex items-center gap-2">🕒 Historial Movimientos (<span id="countMov">0</span>)</button>
+      <button onclick="cambiarTab('auditoria')" id="tab-auditoria" class="pb-3 border-b-2 border-transparent text-stone-500 hover:text-stone-800 flex items-center gap-2 hidden">🛡️ Registro de Auditoría</button>
+    </div>
+
+    <!-- VISTA RESUMEN -->
+    <div id="vista-resumen" class="space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm"><p class="text-xs font-bold uppercase text-stone-400">STOCK TOTAL</p><p id="kpiStock" class="text-3xl font-extrabold text-stone-900 mt-2">0 m²</p></div>
+        <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm"><p class="text-xs font-bold uppercase text-stone-400">TOTAL VENTAS</p><p id="kpiVentas" class="text-3xl font-extrabold text-emerald-700 mt-2">0 m²</p></div>
+        <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm"><p class="text-xs font-bold uppercase text-stone-400">TOTAL MERMAS</p><p id="kpiMermas" class="text-3xl font-extrabold text-rose-700 mt-2">0 m²</p></div>
+        <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm"><p class="text-xs font-bold uppercase text-stone-400">EN ALERTA</p><p id="kpiAlertas" class="text-3xl font-extrabold text-[#B45309] mt-2">0 Items</p></div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm">
+        <h3 class="font-bold text-stone-900 text-sm uppercase mb-4">DINÁMICA DE MOVIMIENTOS</h3>
+        <div id="dinamicaBarras" class="space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- VISTA CATÁLOGO -->
+    <div id="vista-catalogo" class="hidden bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+      <div class="p-4 border-b border-stone-200 flex justify-between"><h3 class="font-bold">Catálogo</h3><input type="text" id="buscadorInv" oninput="filtrarInventario()" placeholder="🔍 Buscar..." class="px-3 py-1 border rounded text-sm"></div>
+      <table class="w-full text-left text-sm"><thead class="bg-stone-50 text-xs uppercase"><tr><th class="p-3">Ref</th><th class="p-3">Producto</th><th class="p-3">Formato</th><th class="p-3 text-right">Stock</th><th class="p-3 text-center">Estado</th></tr></thead><tbody id="tablaInventario" class="divide-y"></tbody></table>
+    </div>
+
+    <!-- VISTA HISTORIAL -->
+    <div id="vista-historial" class="hidden bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+      <table class="w-full text-left text-sm"><thead class="bg-stone-50 text-xs uppercase"><tr><th class="p-3">ID</th><th class="p-3">Fecha</th><th class="p-3">Ref</th><th class="p-3">Tipo</th><th class="p-3 text-right">Cant</th><th class="p-3">Notas</th></tr></thead><tbody id="tablaMovimientos" class="divide-y"></tbody></table>
+    </div>
+
+    <!-- VISTA AUDITORÍA -->
+    <div id="vista-auditoria" class="hidden bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
+      <table class="w-full text-left text-sm"><thead class="bg-stone-800 text-white text-xs uppercase"><tr><th class="p-3">Fecha</th><th class="p-3">Usuario</th><th class="p-3">Rol</th><th class="p-3">Acción</th><th class="p-3">Detalle</th></tr></thead><tbody id="tablaAuditoria" class="divide-y"></tbody></table>
+    </div>
+  </div>
+
+  <!-- MODAL MOVIMIENTO -->
+  <div id="modalMov" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <h3 class="text-lg font-bold">📈 Registrar Movimiento</h3>
+      <form onsubmit="enviarMovimiento(event)" class="space-y-3">
+        <select id="movReferencia" required class="w-full p-2 border rounded text-sm"></select>
+        <select id="movTipo" required class="w-full p-2 border rounded text-sm"></select>
+        <input type="number" step="0.01" id="movCantidad" required placeholder="Cantidad m²" class="w-full p-2 border rounded text-sm">
+        <input type="text" id="movNotas" required placeholder="Factura / Motivo" class="w-full p-2 border rounded text-sm">
+        <div class="flex justify-end gap-2"><button type="button" onclick="cerrarModal('modalMov')" class="px-3 py-1 text-sm">Cancelar</button><button type="submit" class="px-4 py-1 bg-[#B45309] text-white rounded text-sm">Guardar</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL PRODUCTO -->
+  <div id="modalProd" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+      <h3 class="text-lg font-bold">+ Nuevo Producto</h3>
+      <form onsubmit="enviarNuevoProducto(event)" class="space-y-3">
+        <input type="text" id="prodRef" required placeholder="Código (Ej: CER-99)" class="w-full p-2 border rounded text-sm">
+        <input type="text" id="prodNombre" required placeholder="Nombre" class="w-full p-2 border rounded text-sm">
+        <input type="text" id="prodFormato" required placeholder="Formato" class="w-full p-2 border rounded text-sm">
+        <input type="number" step="0.01" id="prodStock" required placeholder="Stock Inicial" class="w-full p-2 border rounded text-sm">
+        <div class="flex justify-end gap-2"><button type="button" onclick="cerrarModal('modalProd')" class="px-3 py-1 text-sm">Cancelar</button><button type="submit" class="px-4 py-1 bg-[#B45309] text-white rounded text-sm">Crear</button></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyLNzNf54ZdtkijZeD7_2UnfhKTxqJVdcsXCoMTo7qEFMlyt39dBZTor7QsXNFD4KW/exec";
+
+    let sesionActual = null;
+    let inventarioGlobal = [];
+
+    async function llamarAPI(payload) {
+      const resp = await fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+      return await resp.json();
+    }
+
+    async function iniciarSesion(e) {
+      e.preventDefault();
+      const err = document.getElementById("loginError");
+      err.classList.add("hidden");
+      const res = await llamarAPI({ accion: "login", usuario: document.getElementById("userInput").value, password: document.getElementById("passInput").value });
+      if (res.exito) {
+        sesionActual = res;
+        configurarRol();
+        document.getElementById("loginScreen").classList.add("hidden");
+        document.getElementById("appScreen").classList.remove("hidden");
+        await actualizarDatos();
+      } else {
+        err.textContent = res.mensaje;
+        err.classList.remove("hidden");
+      }
+    }
+
+    function configurarRol() {
+      document.getElementById("userNameDisplay").textContent = sesionActual.nombre;
+      document.getElementById("userRoleBadge").textContent = sesionActual.rol;
+      const selectTipo = document.getElementById("movTipo");
+      const btnProd = document.getElementById("btnAbrirProd");
+      const tabAudit = document.getElementById("tab-auditoria");
+      btnProd.classList.add("hidden");
+      tabAudit.classList.add("hidden");
+
+      if (sesionActual.rol === "Administrador") {
+        selectTipo.innerHTML = `<option value="Venta">Venta</option><option value="Compra">Compra</option><option value="Pérdida">Pérdida</option>`;
+        btnProd.classList.remove("hidden");
+        tabAudit.classList.remove("hidden");
+      } else if (sesionActual.rol === "Ventas") {
+        selectTipo.innerHTML = `<option value="Venta">Venta</option>`;
+      } else if (sesionActual.rol === "Bodega") {
+        selectTipo.innerHTML = `<option value="Compra">Compra</option><option value="Pérdida">Pérdida</option>`;
+      } else if (sesionActual.rol === "Contabilidad") {
+        document.getElementById("btnAbrirMov").classList.add("hidden");
+        tabAudit.classList.remove("hidden");
+      }
+    }
+
+    async function actualizarDatos() {
+      const res = await llamarAPI({ accion: "obtenerDatos", usuario: sesionActual.usuario, rol: sesionActual.rol });
+      if (res.exito) {
+        inventarioGlobal = res.inventario;
+        document.getElementById("countCat").textContent = inventarioGlobal.length;
+        document.getElementById("countMov").textContent = res.movimientos.length;
+        renderizarDashboard(inventarioGlobal);
+        renderizarInventario(inventarioGlobal);
+        renderizarMovimientos(res.movimientos);
+        if (res.logs) renderizarAuditoria(res.logs);
+      }
+    }
+
+    function renderizarDashboard(lista) {
+      let stock = 0, ventas = 0, mermas = 0, crit = 0, htmlD = "";
+      lista.forEach(i => {
+        stock += Number(i.stockActual || 0);
+        ventas += Number(i.salidas || 0);
+        mermas += Number(i.perdidas || 0);
+        if (i.estado !== "Óptimo") crit++;
+        htmlD += `<div class="text-xs flex justify-between p-2 bg-stone-50 rounded"><span><b>${i.nombre}</b></span><span>Stock: <b>${i.stockActual} m²</b></span></div>`;
+      });
+      document.getElementById("kpiStock").textContent = `${stock} m²`;
+      document.getElementById("kpiVentas").textContent = `${ventas} m²`;
+      document.getElementById("kpiMermas").textContent = `${mermas} m²`;
+      document.getElementById("kpiAlertas").textContent = `${crit} Items`;
+      document.getElementById("dinamicaBarras").innerHTML = htmlDinamica = htmlD;
+    }
+
+    function renderizarInventario(lista) {
+      const tbody = document.getElementById("tablaInventario");
+      const selectRef = document.getElementById("movReferencia");
+      tbody.innerHTML = ""; selectRef.innerHTML = "";
+      lista.forEach(i => {
+        tbody.innerHTML += `<tr class="hover:bg-stone-50"><td class="p-3 font-mono font-bold">${i.referencia}</td><td class="p-3">${i.nombre}</td><td class="p-3">${i.formato}</td><td class="p-3 text-right font-bold">${i.stockActual} m²</td><td class="p-3 text-center"><span class="px-2 py-1 rounded text-xs">${i.estado}</span></td></tr>`;
+        selectRef.innerHTML += `<option value="${i.referencia}|${i.nombre}">${i.referencia} - ${i.nombre}</option>`;
+      });
+    }
+
+    function renderizarMovimientos(movs) {
+      const tbody = document.getElementById("tablaMovimientos");
+      tbody.innerHTML = "";
+      movs.forEach(m => { tbody.innerHTML += `<tr class="hover:bg-stone-50"><td class="p-3 text-xs">${m.id}</td><td class="p-3 text-xs">${String(m.fecha).substring(0,10)}</td><td class="p-3 font-mono">${m.referencia}</td><td class="p-3 font-semibold">${m.tipo}</td><td class="p-3 text-right font-bold">${m.cantidad}</td><td class="p-3 text-xs">${m.notas}</td></tr>`; });
+    }
+
+    function renderizarAuditoria(logs) {
+      const tbody = document.getElementById("tablaAuditoria");
+      tbody.innerHTML = "";
+      logs.forEach(l => { tbody.innerHTML += `<tr class="hover:bg-stone-50 text-xs"><td class="p-3 font-mono">${l.fecha}</td><td class="p-3 font-bold">${l.usuario}</td><td class="p-3">${l.rol}</td><td class="p-3 font-bold">${l.accion}</td><td class="p-3">${l.detalle}</td></tr>`; });
+    }
+
+    function cambiarTab(t) {
+      ['resumen','catalogo','historial','auditoria'].forEach(v => {
+        document.getElementById('vista-' + v).classList.add('hidden');
+        document.getElementById('tab-' + v).className = "pb-3 border-b-2 border-transparent text-stone-500 hover:text-stone-800 flex items-center gap-2";
+      });
+      document.getElementById('vista-' + t).classList.remove('hidden');
+      document.getElementById('tab-' + t).className = "pb-3 border-b-2 border-[#B45309] text-[#B45309] flex items-center gap-2";
+    }
+
+    function abrirModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+    function cerrarModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+
+    async function enviarMovimiento(e) {
+      e.preventDefault();
+      const [ref, prod] = document.getElementById("movReferencia").value.split("|");
+      const res = await llamarAPI({ accion: "registrarMovimiento", usuario: sesionActual.usuario, rol: sesionActual.rol, referencia: ref, producto: prod, tipoMovimiento: document.getElementById("movTipo").value, cantidad: document.getElementById("movCantidad").value, notas: document.getElementById("movNotas").value });
+      alert(res.mensaje);
+      if (res.exito) { cerrarModal('modalMov'); e.target.reset(); await actualizarDatos(); }
+    }
+
+    async function enviarNuevoProducto(e) {
+      e.preventDefault();
+      const res = await llamarAPI({ accion: "crearProducto", usuario: sesionActual.usuario, rol: sesionActual.rol, referencia: document.getElementById("prodRef").value, nombre: document.getElementById("prodNombre").value, formato: document.getElementById("prodFormato").value, stockInicial: document.getElementById("prodStock").value });
+      alert(res.mensaje);
+      if (res.exito) { cerrarModal('modalProd'); e.target.reset(); await actualizarDatos(); }
+    }
+
+    function filtrarInventario() {
+      const q = document.getElementById("buscadorInv").value.toLowerCase();
+      renderizarInventario(inventarioGlobal.filter(i => String(i.referencia).toLowerCase().includes(q) || String(i.nombre).toLowerCase().includes(q)));
+    }
+
+    function cerrarSesion() { location.reload(); }
+  </script>
+</body>
+</html>
+
